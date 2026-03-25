@@ -15,7 +15,7 @@ async function run() {
     execSync("sudo apt-get install -y dnsutils", { stdio: "inherit" });
 
     execSync(
-      "nohup bash -c 'tcpdump -l -n udp port 53 2>/dev/null | tee -a egress-logs/dns.log' &"
+      "nohup bash -c 'while true; do cat /proc/net/udp > egress-logs/dns.log; sleep 2; done' &"
     );
 
     execSync(
