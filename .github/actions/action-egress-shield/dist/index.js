@@ -13,11 +13,12 @@ async function run() {
     execSync("pip install mitmproxy", { stdio: "inherit" });
     execSync("sudo apt-get update", { stdio: "inherit" });
     execSync("sudo apt-get install -y dnsutils", { stdio: "inherit" });
-
+    
+    execSync("echo doing dns capture");
     execSync(
       "nohup bash -c 'while true; do cat /proc/net/udp > egress-logs/dns.log; sleep 2; done' &"
     );
-
+    execSync("echo doing socket capture");
     execSync(
       "nohup bash -c 'while true; do ss -tupn >> egress-logs/sockets.log; sleep 2; done' &"
     );
