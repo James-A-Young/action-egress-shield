@@ -1,0 +1,12 @@
+{
+  "name": "egress-shield",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "echo 'No build step needed'"
+  },
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/artifact": "^1.1.0"
+  }
+}
