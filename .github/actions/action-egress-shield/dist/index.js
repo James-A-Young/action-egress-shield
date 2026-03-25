@@ -45,10 +45,8 @@ async function run() {
       process.env.GITHUB_ENV,
       "HTTPS_PROXY=http://localhost:8080\n"
     );
-    fs.appendFileSync(
-      process.env.GITHUB_ENV,
-      `NODE_OPTIONS=--require ${process.env.GITHUB_ACTION_PATH}/node-shim.js\n`
-    );
+  
+    core.exportVariable("NODE_OPTIONS", "--require /path/to/shim.js");
   } catch (err) {
     core.setFailed(err.message);
   }
