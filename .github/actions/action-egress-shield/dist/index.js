@@ -14,14 +14,11 @@ async function run() {
     execSync("sudo apt-get update", { stdio: "inherit" });
     execSync("sudo apt-get install -y dnsutils", { stdio: "inherit" });
     
-    execSync("echo doing dns capture");
-    execSync(
-      "nohup bash -c 'while true; do cat /proc/net/udp > egress-logs/dns.log; sleep 2; done' &"
-    );
-    execSync("echo doing socket capture");
-    execSync(
-      "nohup bash -c 'while true; do ss -tupn >> egress-logs/sockets.log; sleep 2; done' &"
-    );
+    console.log("doing dns capture");
+    startBackground("while true; do cat /proc/net/udp > egress-logs/dns.log; sleep 2; done");
+
+    console.log("doing socket capture");
+    startBackground("while true; do ss -tupn >> egress-logs/sockets.log; sleep 2; done");
 
     process.env.ALLOWED_DOMAINS = allowedDomains;
     process.env.ALLOWED_IPS = allowedIps;
