@@ -1,6 +1,15 @@
 const core = require("@actions/core");
-const { execSync } = require("child_process");
+const { execSync, spawn } = require("child_process");
 const fs = require("fs");
+
+function startBackground(command) {
+  const child = spawn("bash", ["-c", command], {
+    detached: true,
+    stdio: "ignore"
+  });
+
+  child.unref();
+}
 
 async function run() {
   try {
