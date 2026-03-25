@@ -1,4 +1,4 @@
-name: "Action Egress Shield"
+name: "Egress Shield"
 description: "Logs and restricts outbound network access on GitHub-hosted runners"
 
 inputs:
@@ -63,6 +63,7 @@ runs:
         echo "ALLOWED_DOMAINS=${{ inputs.allowed_domains }}" >> $GITHUB_ENV
         echo "ALLOWED_IPS=${{ inputs.allowed_ips }}" >> $GITHUB_ENV
         echo "BLOCK=${{ inputs.block }}" >> $GITHUB_ENV
+
   post:
     - name: Zip logs
       shell: bash
@@ -74,4 +75,4 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: egress-logs
-        path: egress-logs.tar.gz
+        path: egress-logs.zip
