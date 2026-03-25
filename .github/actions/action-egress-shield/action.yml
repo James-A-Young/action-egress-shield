@@ -1,0 +1,77 @@
+name: "Action Egress Shield"
+description: "Logs and restricts outbound network access on GitHub-hosted runners"
+
+inputs:
+  allowed_domains:
+    description: "Space-separated list of allowed domains"
+    required: false
+  allowed_ips:
+    description: "Space-separated list of allowed IPs"
+    required: false
+  block:
+    description: "Block all traffic not in allowlist"
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install dependencies
+      shell: bash
+      run: |
+        pip install mitmproxy
+        sudo apt-get update
+        sudo apt-get install -y dnsutils
+
+    - name: Prepare log directory
+      shell: bash
+      run: mkdir -p egress-logs
+
+    - name: Start DNS logger
+      shell: bash
+      run: |
+        nohup bash -c 'while true; do
+          tcpdump -l -n udp port 53 2>/dev/null | tee -a egress-logs/dns.log
+        done' &
+    
+    - name: Start socket monitor
+      shell: bash
+      run: |
+        nohup bash -c 'while true; do
+          ss -tupn >> egress-logs/sockets.log
+          sleep 2
+        done' &
+
+    - name: Start proxy
+      shell: bash
+      run: |
+        export ALLOWED_DOMAINS="${{ inputs.allowed_domains }}"
+        export ALLOWED_IPS="${{ inputs.allowed_ips }}"
+        export BLOCK="${{ inputs.block }}"
+        nohup mitmdump -s $GITHUB_ACTION_PATH/proxy.py --listen-port 8080 \
+          > egress-logs/proxy.log 2>&1 &
+
+    - name: Enable proxy environment
+      shell: bash
+      run: |
+        echo "HTTP_PROXY=http://localhost:8080" >> $GITHUB_ENV
+        echo "HTTPS_PROXY=http://localhost:8080" >> $GITHUB_ENV
+        echo "NODE_OPTIONS=--require $GITHUB_ACTION_PATH/node-shim.js" >> $GITHUB_ENV
+
+    - name: Export allowlist
+      shell: bash
+      run: |
+        echo "ALLOWED_DOMAINS=${{ inputs.allowed_domains }}" >> $GITHUB_ENV
+        echo "ALLOWED_IPS=${{ inputs.allowed_ips }}" >> $GITHUB_ENV
+        echo "BLOCK=${{ inputs.block }}" >> $GITHUB_ENV
+  post:
+    - name: Zip logs
+      shell: bash
+      run: |
+        sleep 1
+        zip -r egress-logs.zip egress-logs
+
+    - name: Upload egress logs
+      uses: actions/upload-artifact@v4
+      with:
+        name: egress-logs
+        path: egress-logs.tar.gz
