@@ -25,12 +25,21 @@ function safePkill(pattern) {
   core.warning(`pkill failed for pattern "${pattern}" (exit: ${res.status ?? "unknown"})`);
 }
 
-function buildArtifactName(base) {
-  const runId = process.env.GITHUB_RUN_ID || "local";
-  const runAttempt = process.env.GITHUB_RUN_ATTEMPT || "1";
-  const job = (process.env.GITHUB_JOB || "job").replace(/[^a-zA-Z0-9._-]/g, "-");
-  const ts = Date.now();
-  return `${base}-${job}-${runId}-${runAttempt}-${ts}`.slice(0, 255);
+function buildArtifactName() {
+  const runId = String(process.env.GITHUB_RUN_ID || "0");
+  const attempt = String(process.env.GITHUB_RUN_ATTEMPT || "1");
+  const ts = String(Date.now());
+  // ultra-safe: lowercase + digits + underscore
+  return `egresslogs_${runId}_${attempt}_${ts}`.slice(0, 80);
+}
+
+function getArtifactClient() {
+  // v2+
+  if (artifact.DefaultArtifactClient) {
+    return new artifact.DefaultArtifactClient();
+  }
+  // v1 fallback
+  return artifact.create();
 }
 
 async function run() {
@@ -43,9 +52,9 @@ async function run() {
     execSync("zip -r egress-logs.zip egress-logs", { stdio: "inherit" });
     clearProxyEnv();
 
-    const client = artifact.create();
-    const artifactName = buildArtifactName("egress-logs");
-    core.info(`Uploading artifact as: ${artifactName}`);
+    const client = getArtifactClient();
+    const artifactName = buildArtifactName();
+    core.info(`Uploading artifact as: ${JSON.stringify(artifactName)}`);
 
     await client.uploadArtifact(artifactName, ["egress-logs.zip"], ".", {
       continueOnError: true
