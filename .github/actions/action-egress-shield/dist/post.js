@@ -1,6 +1,6 @@
 const core = require("@actions/core");
 const artifact = require("@actions/artifact");
-const { execSync } = require("child_process");
+const { execSync, spawnSync } = require("child_process");
 const fs = require("fs");
 
 function safePkill(pattern) {
