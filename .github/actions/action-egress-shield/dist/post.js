@@ -3,21 +3,36 @@ const artifact = require("@actions/artifact");
 const { execSync } = require("child_process");
 const fs = require("fs");
 
-async function run() {
+function safePkill(pattern) {
   try {
-    execSync("pkill -f mitmdump || true");
-    execSync("pkill -f tcpdump || true");
-    execSync("pkill -f ss || true");
+    const res = spawnSync("pkill", ["-f", pattern], { stdio: "ignore" });
 
-    execSync("zip -r egress-logs.zip egress-logs");
+    // 0 = killed at least one process, 1 = no process matched (both are fine)
+    if (res.status === 0 || res.status === 1) return;
 
-    const client = artifact.create();
+    if (res.error && res.error.code === "ENOENT") {
+      core.info("pkill not found on runner, skipping cleanup for: " + pattern);
+      return;
+    }
+  }
+  catch (err) {
+    core.warning(`pkill failed for pattern "${pattern}": ${err.message}`);
+    return;
+  }
+  core.warning(`pkill failed for pattern "${pattern}" (exit: ${res.status ?? "unknown"})`);
+}
+
+async function run() {
+
+  safePkill("mitmdump");
+  safePkill("tcpdump");
+  safePkill("\\bss\\b");
+
+  execSync("zip -r egress-logs.zip egress-logs");
+  const client = artifact.create();
     await client.uploadArtifact("egress-logs", ["egress-logs.zip"], ".", {
       continueOnError: false
     });
-  } catch (err) {
-    core.warning("Post step failed: " + err.message);
-  }
 }
 
 run();
