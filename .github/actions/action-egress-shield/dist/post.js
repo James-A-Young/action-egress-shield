@@ -12,43 +12,47 @@ function clearProxyEnv() {
 }
 
 function safePkill(pattern) {
-  try {
-    const res = spawnSync("pkill", ["-f", pattern], { stdio: "ignore" });
+  const res = spawnSync("pkill", ["-f", pattern], { stdio: "ignore" });
 
-    // 0 = killed at least one process, 1 = no process matched (both are fine)
-    if (res.status === 0 || res.status === 1) return;
+  // 0 = killed, 1 = no match (both fine)
+  if (res.status === 0 || res.status === 1) return;
 
-    if (res.error && res.error.code === "ENOENT") {
-      core.info("pkill not found on runner, skipping cleanup for: " + pattern);
-      return;
-    }
-  }
-  catch (err) {
-    core.warning(`pkill failed for pattern "${pattern}": ${err.message}`);
+  if (res.error && res.error.code === "ENOENT") {
+    core.info(`pkill not found on runner, skipping cleanup for: ${pattern}`);
     return;
   }
+
   core.warning(`pkill failed for pattern "${pattern}" (exit: ${res.status ?? "unknown"})`);
+}
+
+function buildArtifactName(base) {
+  const runId = process.env.GITHUB_RUN_ID || "local";
+  const runAttempt = process.env.GITHUB_RUN_ATTEMPT || "1";
+  const job = (process.env.GITHUB_JOB || "job").replace(/[^a-zA-Z0-9._-]/g, "-");
+  const ts = Date.now();
+  return `${base}-${job}-${runId}-${runAttempt}-${ts}`.slice(0, 255);
 }
 
 async function run() {
   try {
     if (!fs.existsSync("egress-logs")) {
       core.warning("egress-logs directory not found, skipping artifact upload");
-    } else {
-      execSync("zip -r egress-logs.zip egress-logs", { stdio: "inherit" });
-
-      // Prevent artifact client from trying to tunnel via stale local proxy
-      clearProxyEnv();
-
-      const client = artifact.create();
-      await client.uploadArtifact("egress-logs", ["egress-logs.zip"], ".", {
-        continueOnError: true
-      });
+      return;
     }
+
+    execSync("zip -r egress-logs.zip egress-logs", { stdio: "inherit" });
+    clearProxyEnv();
+
+    const client = artifact.create();
+    const artifactName = buildArtifactName("egress-logs");
+    core.info(`Uploading artifact as: ${artifactName}`);
+
+    await client.uploadArtifact(artifactName, ["egress-logs.zip"], ".", {
+      continueOnError: true
+    });
   } catch (err) {
     core.warning(`Artifact upload failed: ${err.message}`);
   } finally {
-    // Cleanup after upload attempt
     safePkill("mitmdump");
     safePkill("tcpdump");
     safePkill("\\bss\\b");
