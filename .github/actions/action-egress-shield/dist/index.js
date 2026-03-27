@@ -37,6 +37,11 @@ async function run() {
       "nohup mitmdump -s $GITHUB_ACTION_PATH/proxy.py --listen-port 8080 > egress-logs/proxy.log 2>&1 &"
     );
 
+    // Wait until mitmproxy is accepting connections on port 8080 (up to 30s)
+    execSync(
+      "timeout 30 bash -c 'until bash -c \"</dev/tcp/localhost/8080\" 2>/dev/null; do sleep 0.5; done'"
+    );
+
     fs.appendFileSync(
       process.env.GITHUB_ENV,
       "HTTP_PROXY=http://localhost:8080\n"
