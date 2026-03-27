@@ -1,6 +1,10 @@
 import * as core from "@actions/core";
 import { execSync, spawn } from "child_process";
 import fs from "fs";
+import { fileURLToPath } from "url";
+import path from "path";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 function startBackground(command) {
   const child = spawn("bash", ["-c", command], {
@@ -34,7 +38,7 @@ async function run() {
     process.env.BLOCK = block;
 
     execSync(
-      "nohup mitmdump -s $GITHUB_ACTION_PATH/proxy.py --listen-port 8080 > egress-logs/proxy.log 2>&1 &"
+      `nohup mitmdump -s ${path.join(__dirname, "..", "proxy.py")} --listen-port 8080 > egress-logs/proxy.log 2>&1 &`
     );
 
     // Configurable timeout: action input takes precedence, then env var, then default 60s
@@ -119,7 +123,7 @@ async function run() {
       "HTTPS_PROXY=http://localhost:8080\n"
     );
   
-    core.exportVariable("NODE_OPTIONS", "--require /path/to/shim.js");
+    core.exportVariable("NODE_OPTIONS", `--require ${path.join(__dirname, "..", "node-shim.js")}`);
   } catch (err) {
     core.setFailed(err.message);
   }
