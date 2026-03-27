@@ -38,9 +38,24 @@ async function run() {
     );
 
     // Wait until mitmproxy is accepting connections on port 8080 (up to 30s)
-    execSync(
-      "timeout 30 bash -c 'until bash -c \"</dev/tcp/localhost/8080\" 2>/dev/null; do sleep 0.5; done'"
-    );
+    const maxWaitMs = 30_000;
+    const pollMs = 500;
+    const startTime = Date.now();
+    core.info("Waiting for mitmproxy to start on port 8080...");
+    while (true) {
+      try {
+        execSync("nc -z localhost 8080", { stdio: "ignore" });
+        core.info("mitmproxy is ready.");
+        break;
+      } catch {
+        if (Date.now() - startTime >= maxWaitMs) {
+          throw new Error("mitmproxy did not start within 30 seconds");
+        }
+        const elapsed = Math.round((Date.now() - startTime) / 1000);
+        core.info(`Waiting for mitmproxy to start on port 8080... (${elapsed}s elapsed)`);
+        await new Promise(r => setTimeout(r, pollMs));
+      }
+    }
 
     fs.appendFileSync(
       process.env.GITHUB_ENV,
