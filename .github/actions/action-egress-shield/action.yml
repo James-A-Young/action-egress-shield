@@ -1,0 +1,21 @@
+name: "Egress Shield"
+description: "Logs and restricts outbound network access on GitHub-hosted runners"
+
+inputs:
+  allowed_domains:
+    description: "Space-separated list of allowed domains"
+    required: false
+  allowed_ips:
+    description: "Space-separated list of allowed IPs"
+    required: false
+  block:
+    description: "Block all traffic not in allowlist"
+    default: "false"
+  startup_timeout:
+    description: "Seconds to wait for mitmproxy to start (overridden by EGRESS_SHIELD_STARTUP_TIMEOUT env var)"
+    default: "60"
+
+runs:
+  using: "node24"
+  main: "dist/index.js"
+  post: "dist/post.js"
