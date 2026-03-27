@@ -1,6 +1,6 @@
-const core = require("@actions/core");
-const { execSync, spawn } = require("child_process");
-const fs = require("fs");
+import * as core from "@actions/core";
+import { execSync, spawn } from "child_process";
+import fs from "fs";
 
 function startBackground(command) {
   const child = spawn("bash", ["-c", command], {
@@ -53,3 +53,4 @@ async function run() {
 }
 
 run();
+

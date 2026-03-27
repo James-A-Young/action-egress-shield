@@ -1,7 +1,7 @@
-const core = require("@actions/core");
-const artifact = require("@actions/artifact");
-const { execSync, spawnSync } = require("child_process");
-const fs = require("fs");
+import * as core from "@actions/core";
+import { DefaultArtifactClient } from "@actions/artifact";
+import { execSync, spawnSync } from "child_process";
+import fs from "fs";
 
 function clearProxyEnv() {
   const keys = [
@@ -33,15 +33,6 @@ function buildArtifactName() {
   return `egresslogs_${runId}_${attempt}_${ts}`.slice(0, 80);
 }
 
-function getArtifactClient() {
-  // v2+
-  if (artifact.DefaultArtifactClient) {
-    return new artifact.DefaultArtifactClient();
-  }
-  // v1 fallback
-  return artifact.create();
-}
-
 async function run() {
   try {
     if (!fs.existsSync("egress-logs")) {
@@ -52,13 +43,11 @@ async function run() {
     execSync("zip -r egress-logs.zip egress-logs", { stdio: "inherit" });
     clearProxyEnv();
 
-    const client = getArtifactClient();
+    const client = new DefaultArtifactClient();
     const artifactName = buildArtifactName();
     core.info(`Uploading artifact as: ${JSON.stringify(artifactName)}`);
 
-    await client.uploadArtifact(artifactName, ["egress-logs.zip"], ".", {
-      continueOnError: true
-    });
+    await client.uploadArtifact(artifactName, ["egress-logs.zip"], ".");
   } catch (err) {
     core.warning(`Artifact upload failed: ${err.message}`);
   } finally {
